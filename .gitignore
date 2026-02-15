@@ -1,0 +1,13 @@
+# 大数据文件
+raw/*.csv
+raw/*.parquet
+raw/*.zip
+raw/*.h5
+*.csv
+*.parquet
+*.h5
+
+# Qlib 数据
+qlib/bins/
+qlib/calendar/
+qlib/instruments/
