@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""
+增强版 SuperTrend 自定义参数回测
+
+参数设置:
+- ATR 周期: 20
+- ATR 倍数: 2
+- 突破确认系数 n: 1.5
+- 其他参数保持默认
+"""
+import pandas as pd
+import numpy as np
+from pathlib import Path
+import sys
+import time
+sys.path.append('/mnt/d/quant/qlib_backtest')
+
+from qlib_supertrend_enhanced import SupertrendEnhancedStrategy, run_backtest
+
+
+def load_data_multi_freq(freq="1min", start_date="2023-01-01", end_date="2023-12-31"):
+    """
+    加载 qlib 数据（支持多频率）
+
+    Args:
+        freq: 频率 (1min, 5min, 15min, 60min)
+        start_date: 开始日期
+        end_date: 结束日期
+
+    Returns:
+        DataFrame 包含 OHLCV 数据
+    """
+    DATA_DIR = Path("/mnt/d/quant/qlib_data")
+    RESAMPLED_DIR = Path("/mnt/d/quant/qlib_backtest/qlib_data_multi_freq")
+
+    FIELD_MAPPING = {
+        'open': '$open',
+        'high': '$high',
+        'low': '$low',
+        'close': '$close',
+        'volume': '$volume',
+        'amount': '$amount',
+        'vwap': '$vwap',
+        'open_interest': '$open_interest'
+    }
+
+    instrument = "RB9999.XSGE"
+
+    if freq == "1min":
+        data_dir = DATA_DIR / "instruments" / instrument
+    else:
+        data_dir = RESAMPLED_DIR / "instruments" / freq
+
+    # 读取各个字段
+    data = {}
+    for field in ['open', 'high', 'low', 'close', 'volume', 'amount', 'vwap', 'open_interest']:
+        if freq == "1min":
+            field_file = data_dir / f"{field}.csv"
+        else:
+            feature_name = FIELD_MAPPING[field]
+            field_file = data_dir / feature_name / f"{instrument}.csv"
+
+        if field_file.exists():
+            df = pd.read_csv(field_file, index_col=0, parse_dates=True)
+            data[field] = df.iloc[:, 0]
+
+    if len(data) == 0:
+        print(f"   ⚠️  警告: {freq} 数据文件不存在")
+        return None
+
+    df = pd.DataFrame(data)
+    df = df.sort_index()
+    df = df[(df.index >= start_date) & (df.index <= end_date)]
+
+    return df
+
+
+def run_backtest_for_params(df, year, freq, results_list):
+    """运行回测"""
+    print(f"   开始回测...")
+
+    # 创建策略 - 使用用户指定的参数
+    strategy = SupertrendEnhancedStrategy(
+        period=20,              # ATR 周期
+        multiplier=2,           # ATR 倍数
+        n=1.5,                  # 突破确认系数
+        trailing_stop_rate=80,  # 止损幅度百分比
+        max_holding_period=100, # 最大持仓周期
+        min_liqka=0.5,          # 最小止损系数
+        max_liqka=1.0           # 最大止损系数
+    )
+
+    # 生成信号
+    df_strategy = strategy.generate_signal(df.copy())
+    df_strategy = df_strategy.dropna(subset=['position'])
+
+    # 运行回测
+    results = run_backtest(df_strategy, strategy.name)
+    results['year'] = year
+    results['freq'] = freq
+    results['data_length'] = len(df_strategy)
+    results_list.append(results)
+
+    # 输出结果
+    print(f"   ✅ 完成!")
+    print(f"     累计收益: {results['cumulative_return']:.2%}")
+    print(f"     年化收益: {results['annual_return']:.2%}")
+    print(f"     最大回撤: {results['max_drawdown']:.2%}")
+    print(f"     夏普比率: {results['sharpe_ratio']:.2f}")
+    print(f"     胜率: {results['win_rate']:.2f}%")
+    print(f"     总交易次数: {results['total_trades']}")
+    print(f"     止损平仓次数: {results['stopped_out_count']}")
+
+
+def main():
+    """主程序"""
+    print("="*80)
+    print("增强版 SuperTrend 自定义参数回测")
+    print("="*80)
+    print("参数设置:")
+    print("  ATR 周期: 20")
+    print("  ATR 倍数: 2")
+    print("  突破确认系数 n: 1.5")
+    print("  止损幅度: 80%")
+    print("  持仓周期: 100")
+    print("  止损系数: 0.5~1.0")
+    print("="*80)
+
+    # 测试配置
+    years = [2023, 2024, 2025]
+    freqs = ["15min", "60min"]
+
+    all_results = []
+
+    for year in years:
+        for freq in freqs:
+            print(f"\n{'='*80}")
+            print(f"回测年份: {year}, 频率: {freq}")
+            print(f"{'='*80}")
+
+            # 加载数据
+            print(f"\n加载数据...")
+            df = load_data_multi_freq(freq=freq, start_date=f"{year}-01-01", end_date=f"{year}-12-31")
+
+            if df is None or len(df) == 0:
+                print(f"   ⚠️  {year} 年 {freq} 数据不存在，跳过")
+                continue
+
+            print(f"   数据加载完成: {len(df)} 行")
+            print(f"   时间范围: {df.index.min()} ~ {df.index.max()}")
+
+            # 运行回测
+            start_time = time.time()
+            run_backtest_for_params(df, year, freq, all_results)
+            elapsed = time.time() - start_time
+            print(f"   耗时: {elapsed:.2f}秒")
+
+    # 保存结果到 CSV
+    if len(all_results) > 0:
+        print(f"\n{'='*80}")
+        print("保存结果...")
+        print(f"{'='*80}")
+
+        results_df = pd.DataFrame(all_results)
+
+        # 调整列顺序
+        cols_order = ['year', 'freq', 'strategy_name', 'total_trades', 'cumulative_return',
+                     'annual_return', 'max_drawdown', 'sharpe_ratio', 'win_rate',
+                     'buy_hold_return', 'stopped_out_count', 'data_length']
+        results_df = results_df[[col for col in cols_order if col in results_df.columns]]
+
+        output_file = Path("/mnt/d/quant/qlib_backtest/supertrend_enhanced_custom_params_results.csv")
+        results_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        print(f"   ✅ 结果已保存到: {output_file}")
+
+    # 打印汇总表
+    print(f"\n{'='*80}")
+    print("增强版 SuperTrend 回测结果汇总 (自定义参数)")
+    print(f"{'='*80}")
+
+    print(f"\n{'年份':<6} {'频率':<8} {'累计收益':<10} {'年化收益':<10} {'最大回撤':<10} "
+          f"{'夏普':<8} {'胜率':<8} {'交易次数':<8} {'止损次数':<8}")
+    print("-"*90)
+
+    for results in all_results:
+        print(f"{results['year']:<6} {results['freq']:<8} "
+              f"{results['cumulative_return']:>8.2%} {results['annual_return']:>8.2%} "
+              f"{results['max_drawdown']:>8.2%} {results['sharpe_ratio']:>6.2f} "
+              f"{results['win_rate']:>6.2f}% {results['total_trades']:>8} "
+              f"{results['stopped_out_count']:>8}")
+
+    # 打印年度汇总
+    print(f"\n{'='*80}")
+    print("年度汇总")
+    print(f"{'='*80}")
+
+    for year in years:
+        year_results = [r for r in all_results if r['year'] == year]
+        if not year_results:
+            continue
+
+        avg_return = np.mean([r['cumulative_return'] for r in year_results])
+        avg_sharpe = np.mean([r['sharpe_ratio'] for r in year_results])
+        avg_dd = np.mean([r['max_drawdown'] for r in year_results])
+        total_trades = sum([r['total_trades'] for r in year_results])
+
+        print(f"\n{year}年:")
+        print(f"  平均累计收益: {avg_return:.2%}")
+        print(f"  平均夏普比率: {avg_sharpe:.2f}")
+        print(f"  平均最大回撤: {avg_dd:.2%}")
+        print(f"  总交易次数: {total_trades}")
+
+    print(f"\n{'='*80}")
+    print("回测完成!")
+    print(f"{'='*80}")
+
+    return all_results
+
+
+if __name__ == "__main__":
+    results = main()
