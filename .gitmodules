@@ -14,3 +14,6 @@
 [submodule "frameworks/tradingagents-cn"]
 	path = frameworks/tradingagents-cn
 	url = https://github.com/hsliuping/TradingAgents-CN.git
+[submodule "frameworks/rdagent"]
+	path = frameworks/rdagent
+	url = https://github.com/microsoft/RD-Agent.git
