@@ -1,57 +1,23 @@
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
+# 框架（不追踪修改）
+frameworks/*/
+!frameworks/.gitignore
 
-# Python
+# 临时文件
+sandbox/
+envs/
+*.pyc
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+*.log
 
-# Virtual environments
-venv/
-ENV/
-env/
-.venv
+# 大数据
+data/raw/*.csv
+data/raw/*.parquet
+data/raw/*.zip
+data/raw/*.h5
+data/qlib/bins/*.bin
+data/qlib/calendar/
 
-# Node modules
-node_modules/
-
-# IDE
+# 编辑器
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Environments
-envs/
-
-# Large data files (optional - comment out if you want to track data)
-# projects/data/
-# data/*.csv
-
-# Results and temporary files
-results/
-*.log

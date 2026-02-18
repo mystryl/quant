@@ -1,0 +1,4 @@
+﻿total_trades,win_rate,avg_win,avg_loss,profit_loss_ratio,cumulative_return,max_drawdown,sharpe_ratio,total_ob_created,total_ob_mitigated,ob_reliability,hp_ob_count,year,freq
+0,0,0,0,0,0.0,0.0,0,34,9,26.47058823529412,0,2023,60min
+0,0,0,0,0,0.0,0.0,0,41,9,21.951219512195124,0,2024,60min
+0,0,0,0,0,0.0,0.0,0,38,10,26.31578947368421,0,2025,60min

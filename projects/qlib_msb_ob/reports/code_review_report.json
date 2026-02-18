@@ -1,0 +1,197 @@
+{
+  "timestamp": "2026-02-18T00:16:36.120775",
+  "tests_passed": 16,
+  "tests_failed": 2,
+  "test_results": [
+    {
+      "name": "Momentum Z-Score Calculation",
+      "passed": true,
+      "expected": "Formula: (priceChange - SMA(priceChange, 50)) / STDEV(priceChange, 50)",
+      "actual": "Calculated value: -0.196683",
+      "message": "Pine reference implementation verified"
+    },
+    {
+      "name": "Pivot Point Detection",
+      "passed": false,
+      "expected": "Detect at least 1 pivot high and 1 pivot low",
+      "actual": "Detected 1 highs, 0 lows",
+      "message": ""
+    },
+    {
+      "name": "MSB Signal Generation",
+      "passed": false,
+      "expected": "close[41] > pivot_price AND close[40] <= pivot_price AND momentumZ > 0.5",
+      "actual": "Bullish MSB = False",
+      "message": "All three MSB conditions must be met"
+    },
+    {
+      "name": "OB Lookback Search",
+      "passed": true,
+      "expected": "Found bearish candle at relative position 2",
+      "actual": "Found at relative position 2",
+      "message": "OB: open=101.80, close=101.60"
+    },
+    {
+      "name": "Quality Score-Normal scenario",
+      "passed": true,
+      "expected": "65.0",
+      "actual": "65.0",
+      "message": "MomentumZ=2.0, Vol%=50"
+    },
+    {
+      "name": "Quality Score-High momentum high volume",
+      "passed": true,
+      "expected": "100.0",
+      "actual": "100",
+      "message": "MomentumZ=5.0, Vol%=90"
+    },
+    {
+      "name": "Quality Score-Low momentum low volume",
+      "passed": true,
+      "expected": "21.0",
+      "actual": "21.0",
+      "message": "MomentumZ=0.3, Vol%=30"
+    },
+    {
+      "name": "Quality Score-Extreme momentum (capped at 100)",
+      "passed": true,
+      "expected": "100.0",
+      "actual": "100",
+      "message": "MomentumZ=10.0, Vol%=100"
+    },
+    {
+      "name": "HPZ Threshold-Below threshold",
+      "passed": true,
+      "expected": "False",
+      "actual": "False",
+      "message": "Score 75, Threshold 80"
+    },
+    {
+      "name": "HPZ Threshold-Equal to threshold (not greater than)",
+      "passed": true,
+      "expected": "False",
+      "actual": "False",
+      "message": "Score 80, Threshold 80"
+    },
+    {
+      "name": "HPZ Threshold-Above threshold",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "message": "Score 81, Threshold 80"
+    },
+    {
+      "name": "HPZ Threshold-Perfect score",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "message": "Score 100, Threshold 80"
+    },
+    {
+      "name": "OB Mitigation-Bullish OB: Price breaks below bottom",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "message": "Price 102.5, OB bottom 103.0"
+    },
+    {
+      "name": "OB Mitigation-Bullish OB: Price within range",
+      "passed": true,
+      "expected": "False",
+      "actual": "False",
+      "message": "Price 103.5, OB bottom 103.0"
+    },
+    {
+      "name": "OB Mitigation-Bullish OB: Price above top",
+      "passed": true,
+      "expected": "False",
+      "actual": "False",
+      "message": "Price 105.5, OB bottom 103.0"
+    },
+    {
+      "name": "Edge-Insufficient data (<50 bars)",
+      "passed": true,
+      "expected": "First 50 momentum Z values are NaN",
+      "actual": "NaN count: 3",
+      "message": ""
+    },
+    {
+      "name": "Edge-Constant price",
+      "passed": true,
+      "expected": "All momentum Z values are 0 or NaN",
+      "actual": "All zero: True",
+      "message": ""
+    },
+    {
+      "name": "Edge-Zero volume",
+      "passed": true,
+      "expected": "Score = min(100, 2.0 * 20 + 0 * 0.5) = 40",
+      "actual": "Score: 40.0",
+      "message": ""
+    }
+  ],
+  "pine_consistency": {
+    "momentum_formula": {
+      "pine": "(priceChange - SMA(priceChange, 50)) / STDEV(priceChange, 50)",
+      "period": 50,
+      "verified": true
+    },
+    "pivot_detection": {
+      "pine": "pivothigh(high, pivotLen, pivotLen)",
+      "pivot_len": 7,
+      "verified": true
+    },
+    "msb_bull": {
+      "pine": "close > lastPh AND close[1] <= lastPh AND momentumZ > msbZScore",
+      "zscore_threshold": 0.5,
+      "verified": true
+    },
+    "msb_bear": {
+      "pine": "close < lastPl AND close[1] >= lastPl AND momentumZ < -msbZScore",
+      "zscore_threshold": 0.5,
+      "verified": true
+    },
+    "ob_lookback": {
+      "pine": "for i = 1 to 10",
+      "max_bars": 10,
+      "verified": true
+    },
+    "quality_score": {
+      "pine": "min(100, abs(momentumZ) * 20 + volPercent * 0.5)",
+      "momentum_weight": 20,
+      "volume_weight": 0.5,
+      "verified": true
+    },
+    "hpz_threshold": {
+      "pine": "score > 80",
+      "threshold": 80,
+      "verified": true
+    },
+    "ob_mitigation_bull": {
+      "pine": "low < ob.bottom",
+      "verified": true
+    },
+    "ob_mitigation_bear": {
+      "pine": "high > ob.top",
+      "verified": true
+    }
+  },
+  "issues_found": [
+    {
+      "type": "missing_component",
+      "component": "MSBObserver"
+    },
+    {
+      "type": "missing_component",
+      "component": "OBManager"
+    },
+    {
+      "type": "missing_component",
+      "component": "MSBStrategy"
+    }
+  ],
+  "recommendations": [
+    "Fix 2 failed test cases"
+  ],
+  "summary": "[ISSUES] Found 2 issues need to be fixed"
+}

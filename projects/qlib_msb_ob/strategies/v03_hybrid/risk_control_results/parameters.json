@@ -1,0 +1,29 @@
+{
+  "optimized_params": {
+    "pivot_len": 7,
+    "msb_zscore": 0.3018,
+    "atr_period": 12,
+    "atr_multiplier": 1.143,
+    "tp1_multiplier": 0.3,
+    "tp2_multiplier": 0.888,
+    "tp3_multiplier": 1.456
+  },
+  "original_params": {
+    "pivot_len": 7,
+    "msb_zscore": 0.3,
+    "atr_period": 14,
+    "atr_multiplier": 1.0,
+    "tp1_multiplier": 0.5,
+    "tp2_multiplier": 1.0,
+    "tp3_multiplier": 1.5
+  },
+  "trading_config": {
+    "initial_capital": 100000.0,
+    "base_position_value": 50000.0,
+    "contract_size": 10.0,
+    "margin_rate": 0.1,
+    "commission_rate": 0.0001,
+    "slippage_ticks": 1,
+    "max_margin_ratio": 0.5
+  }
+}

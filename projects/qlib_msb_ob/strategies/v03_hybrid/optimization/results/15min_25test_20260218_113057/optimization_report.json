@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-02-18T11:37:33.495207",
+  "study_name": "V03_Hybrid_15min_2025Test_Optimization",
+  "n_trials": 100,
+  "best_value": 2.2760287428227497,
+  "best_params": {
+    "pivot_len": 7,
+    "msb_zscore": 0.30176801458918845,
+    "atr_period": 12,
+    "atr_multiplier": 1.1428326392742079,
+    "tp1_multiplier": 0.3001792723883795,
+    "tp2_multiplier": 0.8878338011733424,
+    "tp3_multiplier": 1.4560070943677206
+  },
+  "test_metrics": {
+    "win_rate": 71.42857142857143,
+    "profit_loss_ratio": 1.0827357364772487,
+    "cumulative_return": 0.05607325361581306,
+    "max_drawdown": 0.00965835821255977,
+    "sharpe_ratio": 2.40489791971863,
+    "total_trades": 77
+  },
+  "validation_metrics": {
+    "total_trades": 164,
+    "win_rate": 73.78048780487805,
+    "avg_win": 0.0019406142213038153,
+    "avg_loss": -0.0019535736178207773,
+    "profit_loss_ratio": 0.9933663126903719,
+    "cumulative_return": 0.17888167965009694,
+    "max_drawdown": 0.030429001911035414,
+    "sharpe_ratio": 1.7783102129597028
+  },
+  "optimization_config": {
+    "test_year": 2025,
+    "validate_years": [
+      2023,
+      2024
+    ],
+    "freq": "15min",
+    "param_space": {
+      "pivot_len": [
+        5,
+        10
+      ],
+      "msb_zscore": [
+        0.2,
+        0.8
+      ],
+      "atr_period": [
+        10,
+        20
+      ],
+      "atr_multiplier": [
+        0.8,
+        2.0
+      ],
+      "tp1_multiplier": [
+        0.3,
+        1.0
+      ],
+      "tp2_multiplier": [
+        0.8,
+        1.5
+      ],
+      "tp3_multiplier": [
+        1.2,
+        2.5
+      ]
+    }
+  },
+  "success_check": {
+    "success": false,
+    "excellent": false,
+    "failed_items": [
+      [
+        "target_profit_loss_ratio",
+        0,
+        1.2,
+        ">="
+      ],
+      [
+        "target_sharpe_ratio",
+        0,
+        2.0,
+        ">="
+      ],
+      [
+        "target_cumulative_return",
+        0,
+        0.25,
+        ">="
+      ],
+      [
+        "acceptable_win_rate",
+        0,
+        70.0,
+        ">="
+      ]
+    ]
+  },
+  "overfitting_check": {
+    "test_profit_loss_ratio": 1.0827357364772487,
+    "val_profit_loss_ratio": 0.9933663126903719,
+    "diff_percentage": 8.25403843024948,
+    "is_overfitting": false
+  }
+}

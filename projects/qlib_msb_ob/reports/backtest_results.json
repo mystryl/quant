@@ -1,0 +1,83 @@
+{
+  "strategy_name": "MSB+OB",
+  "parameters": {
+    "pivot_len": 7,
+    "msb_zscore": 0.5,
+    "ob_max_count": 10,
+    "hpz_threshold": 80,
+    "atr_period": 14,
+    "atr_multiplier": 1.0,
+    "tp1_multiplier": 0.5,
+    "tp2_multiplier": 1.0,
+    "tp3_multiplier": 1.5
+  },
+  "backtest_period": "2023-2025",
+  "frequency": "60min",
+  "instrument": "RB9999.XSGE",
+  "yearly_results": [
+    {
+      "strategy_name": "MSB+OB_2023",
+      "winning_trades": 105,
+      "losing_trades": 87,
+      "cumulative_return": 0.03584544396642486,
+      "max_drawdown": 0.05030376416391187,
+      "sharpe_ratio": 0.45776629836139043,
+      "win_rate": 54.6875,
+      "avg_win": 0.002765418353857837,
+      "avg_loss": 0.0029155343512377806,
+      "profit_loss_ratio": 0.9485116691160876,
+      "total_trades": 6,
+      "total_ob_created": 129,
+      "total_ob_mitigated": 62,
+      "ob_reliability": 48.06201550387597,
+      "hp_ob_count": 5,
+      "year": 2023
+    },
+    {
+      "strategy_name": "MSB+OB_2024",
+      "winning_trades": 39,
+      "losing_trades": 49,
+      "cumulative_return": -0.0004595041647934561,
+      "max_drawdown": 0.05697174349506562,
+      "sharpe_ratio": 0.006849232081090943,
+      "win_rate": 44.31818181818182,
+      "avg_win": 0.0033188915250045247,
+      "avg_loss": 0.002632961303476879,
+      "profit_loss_ratio": 1.2605166360105107,
+      "total_trades": 8,
+      "total_ob_created": 130,
+      "total_ob_mitigated": 61,
+      "ob_reliability": 46.92307692307692,
+      "hp_ob_count": 6,
+      "year": 2024
+    },
+    {
+      "strategy_name": "MSB+OB_2025",
+      "winning_trades": 26,
+      "losing_trades": 25,
+      "cumulative_return": -0.007554635749419614,
+      "max_drawdown": 0.027707006369426666,
+      "sharpe_ratio": -0.2865363844439008,
+      "win_rate": 50.98039215686274,
+      "avg_win": 0.0016942313691322751,
+      "avg_loss": 0.002059082224456081,
+      "profit_loss_ratio": 0.8228089917972151,
+      "total_trades": 2,
+      "total_ob_created": 79,
+      "total_ob_mitigated": 56,
+      "ob_reliability": 70.88607594936708,
+      "hp_ob_count": 2,
+      "year": 2025
+    }
+  ],
+  "overall_stats": {
+    "total_trades": 16,
+    "avg_win_rate": 50.0,
+    "total_return": 0.0278,
+    "max_drawdown": 0.057,
+    "avg_sharpe_ratio": 0.06,
+    "avg_ob_reliability": 55.29,
+    "avg_hp_ob_count": 4.3
+  },
+  "generated_at": "2026-02-18T00:08:49.785991"
+}
