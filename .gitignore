@@ -71,3 +71,6 @@ node_modules/
 dist/
 build/
 *.egg-info/
+
+# Claude Code - 忽略所有配置和 YOLO 相关文件
+.claude/
