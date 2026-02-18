@@ -1,0 +1,16 @@
+[submodule "frameworks/ssquant"]
+	path = frameworks/ssquant
+	url = https://github.com/songshuquant/ssquant.git
+[submodule "frameworks/akquant"]
+	path = frameworks/akquant
+	url = https://github.com/akfamily/akquant.git
+[submodule "frameworks/klinecharts"]
+	path = frameworks/klinecharts
+	url = https://github.com/klinecharts/KLineChart.git
+	branch = v9
+[submodule "frameworks/qlib"]
+	path = frameworks/qlib
+	url = https://github.com/microsoft/qlib.git
+[submodule "frameworks/tradingagents-cn"]
+	path = frameworks/tradingagents-cn
+	url = https://github.com/hsliuping/TradingAgents-CN.git
