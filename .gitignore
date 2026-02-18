@@ -2,22 +2,72 @@
 frameworks/*/
 !frameworks/.gitignore
 
+# 数据目录（只忽略根目录下的 data/）
+K线数据库/
+/data/
+
+# 但是保留代码目录
+!projects/qlib_backtest/scripts/data/
+
 # 临时文件
 sandbox/
 envs/
 *.pyc
 __pycache__/
-*.log
+*.py[cod]
+*$py.class
+*.so
+.Python
 
-# 大数据
-data/raw/*.csv
-data/raw/*.parquet
-data/raw/*.zip
-data/raw/*.h5
-data/qlib/bins/*.bin
-data/qlib/calendar/
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
 
 # 编辑器
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
+
+# 回测结果
+backtest_reports/
+results/
+
+# 日志和临时文件
+*.log
+*.tmp
+*.pid
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# 测试覆盖率
+.coverage
+.pytest_cache/
+htmlcov/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Qlib 数据
+*.bin
+*.pq
+
+# 忽略生成的 Qlib 数据（在 projects 目录下）
+projects/qlib_backtest/data/*/instruments/
+projects/qlib_backtest/data/*/calendars/
+projects/*/data/qlib_cache/
+
+# Node modules
+node_modules/
+
+# 构建产物
+dist/
+build/
+*.egg-info/
