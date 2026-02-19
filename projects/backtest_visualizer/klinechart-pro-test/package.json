@@ -1,0 +1,17 @@
+{
+  "name": "klinechart-pro-test",
+  "version": "1.0.0",
+  "description": "这是一个简单的测试项目，用于测试 KLineChart Pro 框架。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@klinecharts/pro": "^0.1.1",
+    "klinecharts": "^10.0.0-beta1"
+  }
+}

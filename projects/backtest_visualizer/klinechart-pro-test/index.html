@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KLineChart Pro 测试</title>
+    <link rel="stylesheet" href="/static/klinecharts-pro.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0f0f0f;
+            color: #e0e0e0;
+        }
+        #app {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="/static/klinecharts.min.js"></script>
+    <script src="/static/klinecharts-pro.umd.js"></script>
+    <script>
+        // 自定义数据源
+        class CustomDatafeed {
+            constructor(apiBaseUrl) {
+                this.apiBaseUrl = apiBaseUrl;
+                this.contractsCache = null;
+            }
+
+            /**
+             * 搜索合约
+             * 触发时机：搜索框输入时
+             * 返回：合约信息数组
+             */
+            async searchSymbols(search) {
+                console.log('🔍 搜索合约:', search);
+
+                // 从缓存或API获取合约列表
+                if (!this.contractsCache) {
+                    const response = await fetch(`${this.apiBaseUrl}/api/contracts`);
+                    const contracts = await response.json();
+
+                    // 转换为 SymbolInfo 格式
+                    this.contractsCache = contracts.map(c => ({
+                        id: c.symbol,
+                        exchange: c.exchange,
+                        market: 'futures',
+                        name: c.name,
+                        shortName: c.symbol.split('.')[0],
+                        ticker: c.symbol,
+                        type: 'CONT',
+                        description: `${c.name} (${c.symbol})`
+                    }));
+                }
+
+                // 如果有搜索关键词，进行过滤
+                let result = this.contractsCache;
+                if (search) {
+                    const keyword = search.toLowerCase();
+                    result = this.contractsCache.filter(c =>
+                        c.ticker.toLowerCase().includes(keyword) ||
+                        c.name.toLowerCase().includes(keyword) ||
+                        c.shortName.toLowerCase().includes(keyword)
+                    );
+                }
+
+                console.log(`✅ 找到 ${result.length} 个合约`);
+                return result;
+            }
+
+            /**
+             * 获取历史K线数据
+             * 触发时机：合约或周期切换时
+             * 返回：合约K线数据数组
+             */
+            async getHistoryKLineData(symbol, period, from, to) {
+                // 将 period 对象转换为周期字符串
+                const periodStr = `${period.multiplier}${period.timespan === 'minute' ? 'm' : period.timespan === 'day' ? 'D' : period.timespan === 'week' ? 'W' : period.timespan}`;
+
+                console.log('📊 加载K线数据:', symbol.ticker, periodStr, from, to);
+
+                // 从 API 获取数据，带上周期参数
+                const response = await fetch(`${this.apiBaseUrl}/api/kline/${symbol.ticker}?period=${periodStr}`);
+                const result = await response.json();
+
+                if (!result.data) {
+                    console.warn('⚠️ 没有数据');
+                    return [];
+                }
+
+                // 转换数据格式
+                const klineData = result.data.map(item => ({
+                    timestamp: item.timestamp,
+                    open: item.open,
+                    high: item.high,
+                    low: item.low,
+                    close: item.close,
+                    volume: item.volume
+                }));
+
+                console.log(`✅ 加载了 ${klineData.length} 条数据`);
+                return klineData;
+            }
+
+            /**
+             * 订阅实时数据
+             * 触发时机：合约或周期切换时
+             */
+            subscribe(symbol, period, callback) {
+                console.log('🔔 订阅实时数据:', symbol.ticker, period);
+                // 暂不实现实时数据推送
+                // 可以在这里建立 WebSocket 连接或使用 HTTP 轮询
+            }
+
+            /**
+             * 取消订阅
+             * 触发时机：合约或周期切换时
+             */
+            unsubscribe(symbol, period) {
+                console.log('❌ 取消订阅:', symbol.ticker, period);
+                // 取消 WebSocket 或停止 HTTP 轮询
+            }
+        }
+
+        // 初始化应用
+        async function initApp() {
+            try {
+                // 创建自定义数据源
+                const datafeed = new CustomDatafeed('http://localhost:5001');
+
+                // 获取第一个合约作为默认合约
+                const contracts = await datafeed.searchSymbols();
+                if (contracts.length === 0) {
+                    throw new Error('没有可用合约');
+                }
+
+                console.log('📈 默认合约:', contracts[0]);
+
+                // 创建 KLineChart Pro 实例
+                const chart = new klinechartspro.KLineChartPro({
+                    container: 'app',
+                    locale: 'zh-CN',
+                    symbol: contracts[0],
+                    period: { multiplier: 1, timespan: 'minute', text: '1m' },
+                    periods: [
+                        { multiplier: 1, timespan: 'minute', text: '1m' },
+                        { multiplier: 5, timespan: 'minute', text: '5m' },
+                        { multiplier: 15, timespan: 'minute', text: '15m' },
+                        { multiplier: 1, timespan: 'day', text: '1D' },
+                        { multiplier: 1, timespan: 'week', text: '1W' }
+                    ],
+                    styles: {
+                        candle: {
+                            type: 'candle_solid',
+                            bar: {
+                                upColor: '#26A69A',
+                                downColor: '#EF5350',
+                                noChangeColor: '#888888'
+                            }
+                        }
+                    },
+                    subIndicators: ['VOL', 'MACD'],
+                    datafeed: datafeed
+                });
+
+                console.log('✅ KLineChart Pro 初始化完成');
+            } catch (error) {
+                console.error('❌ 初始化失败:', error);
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
