@@ -9,7 +9,12 @@
       "Bash(git checkout:*)",
       "Bash(git ls-tree:*)",
       "Bash(ls:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(python:*)",
+      "Bash(git reset:*)",
+      "Bash(git push:*)"
     ]
   }
 }
