@@ -27,11 +27,11 @@ def main():
     model_output_dir.mkdir(parents=True, exist_ok=True)
     (model_output_dir.parent / 'training_results').mkdir(parents=True, exist_ok=True)
 
-    # 创建训练框架（只处理HC8888）
+    # 创建训练框架（测试I8888铁矿石）
     trainer = RollingTrainMultiSymbol(
         data_base_dir=data_base_dir,
         model_output_dir=model_output_dir,
-        symbols=['HC8888.XSGE']  # 只处理一个品种进行测试
+        symbols=['I8888.XDCE']  # 测试铁矿石
     )
 
     # 训练（不并行）

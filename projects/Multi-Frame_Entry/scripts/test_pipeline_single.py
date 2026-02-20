@@ -26,11 +26,11 @@ def main():
 
     output_base_dir.mkdir(parents=True, exist_ok=True)
 
-    # 创建数据管道（只处理HC8888）
+    # 创建数据管道（测试I8888铁矿石）
     pipeline = MultiSymbolDataPipeline(
         source_dir=source_dir,
         output_base_dir=output_base_dir,
-        symbols=['HC8888.XSGE']  # 只处理一个品种进行测试
+        symbols=['I8888.XDCE']  # 测试铁矿石
     )
 
     # 处理（不并行）
