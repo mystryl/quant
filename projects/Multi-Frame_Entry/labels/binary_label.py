@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 # 二分类标签配置
 BINARY_LABEL_CONFIG = {
-    'window': 20,          # 前瞻窗口（根K线）
-    'threshold': 0.005,    # 趋势阈值 ±0.5%
+    'window': 20,
+    'sigma_threshold': 1.5,  # 标准差倍数阈值（波动率归一化）
     'data_file': Path('/Users/mystryl/Documents/Quant/data/qlib_data_multi_freq/instruments/60min/$close/HC8888.XSGE.csv'),
     'output_file': Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data/labels/binary_labels.csv')
 }
@@ -28,21 +28,24 @@ BINARY_LABEL_CONFIG = {
 
 def generate_binary_labels(
     window: int = 20,
-    threshold: float = 0.005,
+    sigma_threshold: float = 1.5,
     data_file: Path = None,
     output_file: Path = None
 ) -> pd.DataFrame:
     """
-    生成二分类趋势标签
+    生成二分类趋势标签（波动率归一化版本）
+
+    使用波动率归一化收益定义趋势，使不同时期数据可比。
+    标签定义：|return/σ| > 1.5σ 为有趋势，否则为震荡。
 
     Args:
         window: 前瞻窗口（根K线）
-        threshold: 趋势阈值（如0.005表示±0.5%）
+        sigma_threshold: 标准差倍数阈值（如1.5表示1.5σ）
         data_file: 60min收盘价数据文件
         output_file: 输出文件路径
 
     Returns:
-        包含标签的DataFrame
+        包含标签、归一化收益和波动率的DataFrame
     """
     if data_file is None:
         data_file = BINARY_LABEL_CONFIG['data_file']
@@ -50,11 +53,11 @@ def generate_binary_labels(
         output_file = BINARY_LABEL_CONFIG['output_file']
 
     logger.info("="*60)
-    logger.info("生成二分类趋势标签")
+    logger.info("生成二分类趋势标签（波动率归一化版本）")
     logger.info("="*60)
     logger.info(f"参数:")
     logger.info(f"  前瞻窗口: {window} 根K线")
-    logger.info(f"  趋势阈值: ±{threshold*100:.2f}%")
+    logger.info(f"  趋势阈值: ±{sigma_threshold}σ (波动率归一化)")
 
     # 加载60min收盘价数据
     logger.info(f"\n加载数据: {data_file}")
@@ -69,17 +72,32 @@ def generate_binary_labels(
     future_price = close_price.shift(-window)
     future_return = (future_price - close_price) / close_price
 
-    # 生成二分类标签
-    # 1 = 有趋势（涨幅或跌幅超过阈值）
-    # 0 = 震荡（涨跌幅在阈值内）
+    # 计算滚动波动率（百分比标准差）
+    # 方法：先计算价格的百分比变化，再求标准差
+    price_pct_change = close_price.pct_change()
+    rolling_volatility_1bar = price_pct_change.rolling(window=window).std()
+
+    # 缩放1bar波动率到20bar波动率（假设独立，sqrt(20)倍）
+    rolling_volatility_20bar = rolling_volatility_1bar * np.sqrt(window)
+
+    # 避免除零
+    rolling_volatility_20bar = rolling_volatility_20bar.replace(0, np.nan)
+
+    # 波动率归一化收益
+    normalized_return = future_return / rolling_volatility_20bar
+    normalized_return = normalized_return.clip(-10, 10)  # 限制极值
+
+    # 生成二分类标签（使用标准差倍数阈值）
+    # 1 = 有趋势（归一化收益超过1.5倍标准差）
+    # 0 = 震荡（归一化收益在1.5倍标准差内）
     labels = pd.Series(np.nan, index=df_price.index)
 
-    # 有趋势：上涨或下跌超过阈值
-    has_trend = (future_return.abs() > threshold) & (future_return.notna())
+    # 有趋势：归一化收益超过阈值
+    has_trend = (normalized_return.abs() > sigma_threshold) & (normalized_return.notna())
     labels[has_trend] = 1
 
-    # 震荡：涨跌幅在阈值内
-    is_range = (future_return.abs() <= threshold) & (future_return.notna())
+    # 震荡：归一化收益在阈值内
+    is_range = (normalized_return.abs() <= sigma_threshold) & (normalized_return.notna())
     labels[is_range] = 0
 
     # 创建结果DataFrame
@@ -87,6 +105,8 @@ def generate_binary_labels(
         'datetime': df_price.index,
         'close': close_price.values,
         'future_return': future_return.values,
+        'normalized_return': normalized_return.values,  # 归一化收益
+        'rolling_volatility': rolling_volatility_20bar.values,  # 滚动波动率（20bar缩放）
         'trend_label': labels.values
     })
 
@@ -97,6 +117,14 @@ def generate_binary_labels(
         if pd.notna(label):
             label_name = {0: '震荡', 1: '有趋势'}[int(label)]
             logger.info(f"  {label_name}: {count} ({count/df_result['trend_label'].notna().sum()*100:.1f}%)")
+
+    # 输出归一化收益统计
+    logger.info(f"\n归一化收益统计:")
+    logger.info(f"  均值: {df_result['normalized_return'].mean():.4f}")
+    logger.info(f"  标准差: {df_result['normalized_return'].std():.4f}")
+    logger.info(f"  最小值: {df_result['normalized_return'].min():.4f}")
+    logger.info(f"  最大值: {df_result['normalized_return'].max():.4f}")
+    logger.info(f"  |R| > {1.5}σ: {(df_result['normalized_return'].abs() > 1.5).sum()} ({(df_result['normalized_return'].abs() > 1.5).sum()/len(df_result)*100:.1f}%)")
 
     # 验证最后window个样本
     logger.info(f"\n防未来函数验证:")
@@ -139,7 +167,7 @@ if __name__ == '__main__':
     # 生成二分类标签
     df = generate_binary_labels(
         window=20,
-        threshold=0.005,  # ±0.5%
+        sigma_threshold=1.5,  # 1.5倍标准差
         output_file=Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data/labels/binary_labels.csv')
     )
 

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 数据文件（大文件，不提交）
+data/multi_symbol/
+data/features/*.csv
+data/labels/*.csv
+!data/labels/*.py
+
+# 模型文件（大文件，不提交）
+*.pkl
+models/rolling/
+models/training_results/
+
+# 日志文件
+logs/
+*.log
+nohup.out
+
+# 实验结果
+EXPERIMENT_SUMMARY.md
+Multi_Frame_Entry_Summary.pptx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+temp/
+tmp/
