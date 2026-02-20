@@ -1,0 +1,30 @@
+# Node
+frontend/node_modules
+frontend/.nuxt
+frontend/.output
+frontend/.nitro
+frontend/dist
+frontend/cache
+
+# Python
+backend/__pycache__
+backend/*.py[cod]
+backend/$pyclass
+backend/.pytest_cache
+backend/.venv
+backend/venv
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local

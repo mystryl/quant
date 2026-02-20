@@ -25,8 +25,72 @@
 <body>
     <div id="app"></div>
 
+    <!-- ZigZag 配置按钮 -->
+    <button id="zigzag-config-btn"
+            style="position: fixed; top: 10px; right: 10px; padding: 10px 20px;
+                   background: #FF9800; color: white; border: none; border-radius: 4px;
+                   cursor: pointer; z-index: 1000; font-size: 14px;">
+        ZigZag 配置
+    </button>
+
+    <!-- ZigZag 配置面板 -->
+    <div id="zigzag-config-panel"
+         style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.9);
+                padding: 20px; border-radius: 8px; display: none; z-index: 1001;
+                min-width: 280px; border: 1px solid #FF9800;">
+        <h3 style="color: #FF9800; margin-bottom: 20px; font-size: 16px;">ZigZag 指标配置</h3>
+
+        <div style="margin-bottom: 15px;">
+            <label style="color: #e0e0e0; display: block; margin-bottom: 8px; font-size: 13px;">
+                深度 (Depth): <span id="depth-value" style="color: #FF9800;">12</span>
+            </label>
+            <input type="range" id="zigzag-depth" min="3" max="30" value="12"
+                   style="width: 100%;" oninput="document.getElementById('depth-value').textContent = this.value">
+            <small style="color: #888; font-size: 11px;">查找波峰波谷时检查的K线数量</small>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="color: #e0e0e0; display: block; margin-bottom: 8px; font-size: 13px;">
+                偏差 (Deviation %): <span id="deviation-value" style="color: #FF9800;">5</span>
+            </label>
+            <input type="range" id="zigzag-deviation" min="1" max="20" value="5" step="0.5"
+                   style="width: 100%;" oninput="document.getElementById('deviation-value').textContent = this.value">
+            <small style="color: #888; font-size: 11px;">最小价格变化百分比，低于此值不标记为转折点</small>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="color: #e0e0e0; display: block; margin-bottom: 8px; font-size: 13px;">
+                回溯 (Backstep): <span id="backstep-value" style="color: #FF9800;">3</span>
+            </label>
+            <input type="range" id="zigzag-backstep" min="1" max="10" value="3"
+                   style="width: 100%;" oninput="document.getElementById('backstep-value').textContent = this.value">
+            <small style="color: #888; font-size: 11px;">确认转折点的滞后K线数</small>
+        </div>
+
+        <button id="zigzag-apply"
+                style="width: 100%; padding: 12px; background: #FF9800; color: white;
+                       border: none; border-radius: 4px; cursor: pointer; margin-bottom: 8px;
+                       font-size: 14px; font-weight: bold;">
+            应用配置
+        </button>
+
+        <button id="zigzag-reset"
+                style="width: 100%; padding: 12px; background: #666; color: white;
+                       border: none; border-radius: 4px; cursor: pointer; margin-bottom: 8px;
+                       font-size: 14px;">
+            重置默认
+        </button>
+
+        <button id="zigzag-close"
+                style="width: 100%; padding: 12px; background: #444; color: white;
+                       border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+            关闭
+        </button>
+    </div>
+
     <script src="/static/klinecharts.min.js"></script>
     <script src="/static/klinecharts-pro.umd.js"></script>
+    <script src="/static/indicators.js"></script>
     <script>
         // 自定义数据源
         class CustomDatafeed {
@@ -83,7 +147,7 @@
              */
             async getHistoryKLineData(symbol, period, from, to) {
                 // 将 period 对象转换为周期字符串
-                const periodStr = `${period.multiplier}${period.timespan === 'minute' ? 'm' : period.timespan === 'day' ? 'D' : period.timespan === 'week' ? 'W' : period.timespan}`;
+                const periodStr = `${period.multiplier}${period.timespan === 'minute' ? 'm' : period.timespan === 'hour' ? 'H' : period.timespan === 'day' ? 'D' : period.timespan === 'week' ? 'W' : period.timespan}`;
 
                 console.log('📊 加载K线数据:', symbol.ticker, periodStr, from, to);
 
@@ -154,6 +218,9 @@
                         { multiplier: 1, timespan: 'minute', text: '1m' },
                         { multiplier: 5, timespan: 'minute', text: '5m' },
                         { multiplier: 15, timespan: 'minute', text: '15m' },
+                        { multiplier: 1, timespan: 'hour', text: '1H' },
+                        { multiplier: 2, timespan: 'hour', text: '2H' },
+                        { multiplier: 3, timespan: 'hour', text: '3H' },
                         { multiplier: 1, timespan: 'day', text: '1D' },
                         { multiplier: 1, timespan: 'week', text: '1W' }
                     ],
@@ -167,11 +234,71 @@
                             }
                         }
                     },
-                    subIndicators: ['VOL', 'MACD'],
+                    subIndicators: ['VOL', 'MACD', 'ZIGZAG'],
                     datafeed: datafeed
                 });
 
                 console.log('✅ KLineChart Pro 初始化完成');
+
+                // ZigZag 配置面板逻辑
+                setTimeout(() => {
+                    const configBtn = document.getElementById('zigzag-config-btn');
+                    const configPanel = document.getElementById('zigzag-config-panel');
+                    const closeBtn = document.getElementById('zigzag-close');
+                    const applyBtn = document.getElementById('zigzag-apply');
+                    const resetBtn = document.getElementById('zigzag-reset');
+
+                    if (!configBtn || !configPanel) {
+                        console.warn('⚠️ ZigZag 配置面板元素未找到');
+                        return;
+                    }
+
+                    // 显示/隐藏配置面板
+                    configBtn.addEventListener('click', () => {
+                        configPanel.style.display = 'block';
+                        configBtn.style.display = 'none';
+                    });
+
+                    closeBtn.addEventListener('click', () => {
+                        configPanel.style.display = 'none';
+                        configBtn.style.display = 'block';
+                    });
+
+                    // 应用配置
+                    applyBtn.addEventListener('click', () => {
+                        const depth = parseInt(document.getElementById('zigzag-depth').value);
+                        const deviation = parseFloat(document.getElementById('zigzag-deviation').value);
+                        const backstep = parseInt(document.getElementById('zigzag-backstep').value);
+
+                        try {
+                            // 移除旧指标
+                            chart.removeIndicator('ZIGZAG');
+                            // 创建新指标（使用新参数）
+                            chart.createIndicator('ZIGZAG', false, { calcParams: [depth, deviation, backstep] });
+                            console.log('✅ ZigZag 参数已更新:', { depth, deviation, backstep });
+                        } catch (error) {
+                            console.error('❌ ZigZag 参数更新失败:', error);
+                        }
+                    });
+
+                    // 重置为默认参数
+                    resetBtn.addEventListener('click', () => {
+                        document.getElementById('zigzag-depth').value = 12;
+                        document.getElementById('zigzag-deviation').value = 5;
+                        document.getElementById('zigzag-backstep').value = 3;
+                        document.getElementById('depth-value').textContent = '12';
+                        document.getElementById('deviation-value').textContent = '5';
+                        document.getElementById('backstep-value').textContent = '3';
+
+                        try {
+                            chart.removeIndicator('ZIGZAG');
+                            chart.createIndicator('ZIGZAG', false, { calcParams: [12, 5, 3] });
+                            console.log('✅ ZigZag 参数已重置');
+                        } catch (error) {
+                            console.error('❌ ZigZag 重置失败:', error);
+                        }
+                    });
+                }, 1000);
             } catch (error) {
                 console.error('❌ 初始化失败:', error);
             }

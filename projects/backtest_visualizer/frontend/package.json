@@ -1,0 +1,26 @@
+{
+  "name": "backtest-visualizer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@klinecharts/pro": "^0.1.1",
+    "@pinia/nuxt": "^0.5.5",
+    "@vueuse/core": "^11.3.0",
+    "date-fns": "^4.1.0",
+    "klinecharts": "^9.8.12",
+    "nuxt": "^3.15.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

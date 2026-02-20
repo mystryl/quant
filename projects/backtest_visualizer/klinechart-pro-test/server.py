@@ -147,6 +147,9 @@ def resample_kline_data(df, period):
     period_map = {
         '5m': '5T',
         '15m': '15T',
+        '1H': '1H',
+        '2H': '2H',
+        '3H': '3H',
         '1D': '1D',
         '1W': '1W'
     }
