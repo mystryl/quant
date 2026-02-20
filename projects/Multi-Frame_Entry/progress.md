@@ -53,6 +53,33 @@
   - task_plan.md (rewritten) - 完全重新组织
   - progress.md (modified) - 添加文档整理记录
 
+### Phase 6 策略优化 - 多层时间框架设计
+- **Status:** complete ✅
+- **Started:** 2026-02-21 16:00
+- **Completed:** 2026-02-21 16:15
+- Actions taken:
+  - 读取参考策略：MSB+OB策略实现、入场出场方案设计文档
+  - 分析两个策略的核心设计
+  - 设计多层时间框架架构：
+    - 大级别（60min）：ML模型预测趋势，判断交易环境
+    - 小级别（5/15min）：MSB+OB寻找精确入场点
+    - 出场：4层动态止损系统
+- Key insights:
+  - MSB+OB策略提供专业的结构化出场方案
+  - 多层时间框架是成熟的设计模式
+  - ML模型作为大过滤器，MSB+OB作为精确定位器
+- Architecture:
+  ```
+  60min ML模型 → trading_mode（多头/空头/观望）
+        ↓
+  5min MSB+OB → 精确入场信号
+        ↓
+  4层出场管理 → 初始止损 → 保本 → 追踪 → 结构破坏
+  ```
+- Files created/modified:
+  - task_plan.md (major update) - 多层时间框架设计
+  - progress.md (modified) - 记录策略优化
+
 ### Phase 5: 滚动训练框架优化 (18月窗口 + 3月预测)
 - **Status:** complete ✅
 - **Started:** 2026-02-21 14:45
