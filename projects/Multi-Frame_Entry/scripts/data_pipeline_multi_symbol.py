@@ -492,9 +492,17 @@ class MultiSymbolDataPipeline:
 
 def main():
     """主函数"""
-    # 路径配置
+    # 路径配置（基于脚本位置）
+    project_root = Path(__file__).parent.parent
     source_dir = Path('/Users/mystryl/Documents/Quant/K线数据库/期货商品指数_parquet')
-    output_base_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data')
+    output_base_dir = project_root / 'data'
+
+    # 验证源数据目录
+    if not source_dir.exists():
+        raise FileNotFoundError(f"源数据目录不存在: {source_dir}")
+
+    # 确保输出目录存在
+    output_base_dir.mkdir(parents=True, exist_ok=True)
 
     # 创建数据管道
     pipeline = MultiSymbolDataPipeline(
@@ -503,7 +511,7 @@ def main():
     )
 
     # 处理所有品种
-    results = pipeline.process_all_symbols(parallel=True)
+    results = pipeline.process_all_symbols(parallel=False, max_workers=1)
 
     return results
 

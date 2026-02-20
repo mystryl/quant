@@ -575,9 +575,18 @@ class RollingTrainMultiSymbol:
 
 def main():
     """主函数"""
-    # 路径配置
-    data_base_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data/multi_symbol')
-    model_output_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/models/rolling')
+    # 路径配置（基于脚本位置）
+    project_root = Path(__file__).parent.parent
+    data_base_dir = project_root / 'data' / 'multi_symbol'
+    model_output_dir = project_root / 'models' / 'rolling'
+
+    # 验证数据目录
+    if not data_base_dir.exists():
+        raise FileNotFoundError(f"数据目录不存在: {data_base_dir}")
+
+    # 确保输出目录存在
+    model_output_dir.mkdir(parents=True, exist_ok=True)
+    (model_output_dir.parent / 'training_results').mkdir(parents=True, exist_ok=True)
 
     # 创建训练框架
     trainer = RollingTrainMultiSymbol(
@@ -586,7 +595,7 @@ def main():
     )
 
     # 训练所有品种
-    all_results = trainer.train_all_symbols(parallel=True)
+    all_results = trainer.train_all_symbols(parallel=False, max_workers=1)
 
     return all_results
 

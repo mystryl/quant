@@ -16,8 +16,15 @@ from scripts.data_pipeline_multi_symbol import MultiSymbolDataPipeline
 def main():
     """测试单个品种"""
     # 路径配置
+    project_root = Path(__file__).parent.parent
     source_dir = Path('/Users/mystryl/Documents/Quant/K线数据库/期货商品指数_parquet')
-    output_base_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data')
+    output_base_dir = project_root / 'data'
+
+    # 验证路径
+    if not source_dir.exists():
+        raise FileNotFoundError(f"源数据目录不存在: {source_dir}")
+
+    output_base_dir.mkdir(parents=True, exist_ok=True)
 
     # 创建数据管道（只处理HC8888）
     pipeline = MultiSymbolDataPipeline(

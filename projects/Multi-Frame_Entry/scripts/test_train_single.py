@@ -16,8 +16,16 @@ from scripts.rolling_train_multi_symbol import RollingTrainMultiSymbol
 def main():
     """测试单个品种单一年份"""
     # 路径配置
-    data_base_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data/multi_symbol')
-    model_output_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/models/rolling')
+    project_root = Path(__file__).parent.parent
+    data_base_dir = project_root / 'data' / 'multi_symbol'
+    model_output_dir = project_root / 'models' / 'rolling'
+
+    # 验证路径
+    if not data_base_dir.exists():
+        raise FileNotFoundError(f"数据目录不存在: {data_base_dir}. 请先运行数据准备脚本")
+
+    model_output_dir.mkdir(parents=True, exist_ok=True)
+    (model_output_dir.parent / 'training_results').mkdir(parents=True, exist_ok=True)
 
     # 创建训练框架（只处理HC8888）
     trainer = RollingTrainMultiSymbol(

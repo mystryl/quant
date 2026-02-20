@@ -200,8 +200,16 @@ def _format_symbol_sheet(ws, symbol, df_symbol):
 
 def main():
     """主函数"""
-    results_dir = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/models/training_results')
+    # 路径配置（基于脚本位置）
+    project_root = Path(__file__).parent.parent
+    results_dir = project_root / 'models' / 'training_results'
     output_file = results_dir / 'multi_symbol_comparison.xlsx'
+
+    # 验证结果目录
+    if not results_dir.exists():
+        print(f"\n✗ 训练结果目录不存在: {results_dir}")
+        print("   请先运行训练脚本")
+        return None
 
     excel_file = generate_excel_report(results_dir, output_file)
 

@@ -41,10 +41,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 路径配置
+# 路径配置（使用相对路径，基于project_root）
 SOURCE_DATA_DIR = Path('/Users/mystryl/Documents/Quant/K线数据库/期货商品指数_parquet')
-OUTPUT_BASE_DIR = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/data')
-MODEL_OUTPUT_DIR = Path('/Users/mystryl/Documents/Quant/projects/Multi-Frame_Entry/models/rolling')
+OUTPUT_BASE_DIR = project_root / 'data'
+MODEL_OUTPUT_DIR = project_root / 'models' / 'rolling'
+
+# 验证路径存在
+if not SOURCE_DATA_DIR.exists():
+    raise FileNotFoundError(f"源数据目录不存在: {SOURCE_DATA_DIR}")
+
+# 确保输出目录存在
+OUTPUT_BASE_DIR.mkdir(parents=True, exist_ok=True)
+MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+(project_root / 'logs').mkdir(parents=True, exist_ok=True)
 
 def main():
     """主函数"""
