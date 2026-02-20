@@ -5,7 +5,35 @@
   WHEN: 每完成一个阶段或遇到错误时更新
 -->
 
-## Session: 2026-02-20
+## Session: 2026-02-21
+
+### Phase 5: 滚动训练框架优化 (18月窗口 + 3月预测)
+- **Status:** complete ✅
+- **Started:** 2026-02-21 14:45
+- **Completed:** 2026-02-21 15:00
+- **Elapsed:** ~15分钟
+- Actions taken:
+  - 创建 `scripts/rolling_train_3month.py` - 季度滚动训练引擎(500+行)
+  - 运行18个月训练窗口 + 3月预测的滚动训练
+  - 完成4个品种 × 20个窗口 = 80个模型的训练
+  - 生成Excel综合报告：`models/training_results_3month/滚动训练总结报告.xlsx`
+- Results:
+  - **AU8888.XSGE (黄金)**: AUC=0.6537±0.0526 ⭐ 最佳且最稳定
+  - **CF8888.XZCE (郑棉)**: AUC=0.5840±0.0542, 准确率69.83%
+  - **I8888.XDCE (铁矿石)**: AUC=0.5812±0.0768
+  - **HC8888.XSGE (热卷)**: AUC=0.5758±0.0787
+  - **对比年度滚动**: 所有品种都有改善(+0.3% ~ +2.4%)
+  - **模型稳定性**: AU8888在2024年最稳定(标准差0.0170)
+- Files created/modified:
+  - scripts/rolling_train_3month.py (created) - 500+行
+  - models/rolling_3month/ (created) - 80个模型文件
+  - models/training_results_3month/rolling_results_18months.json (created)
+  - models/training_results_3month/rolling_summary_18months.csv (created)
+  - models/training_results_3month/滚动训练总结报告.xlsx (created) - 4个Sheet
+  - models/training_results_3month/comparison_annual_vs_quarterly.csv (created)
+  - task_plan.md (modified) - Phase 5标记完成
+  - findings.md (modified) - 添加滚动训练对比
+  - progress.md (modified) - 本日志
 
 ### Phase 0: Project Initialization
 - **Status:** complete
