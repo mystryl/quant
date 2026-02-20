@@ -73,82 +73,50 @@ class BinaryTrendModel:
         if model_type == 'xgboost':
             logger.info(f"  学习率: {learning_rate}")
 
-    def random_monthly_split(
+    def time_series_split(
         self,
         df: pd.DataFrame,
-        train_months_per_year: int = 4,
-        valid_months_per_year: int = 4,
-        random_seed: int = 42
+        train_years: Tuple[int, int] = (2022, 2023),
+        valid_year: int = 2024,
+        test_year: int = 2025
     ) -> Dict:
         """
-        按月随机划分数据集
+        时间序列划分（按年份）
 
         Args:
             df: 包含datetime列的数据
-            train_months_per_year: 每年训练集月数
-            valid_months_per_year: 每年验证集月数
-            random_seed: 随机种子
+            train_years: 训练集年份
+            valid_year: 验证集年份
+            test_year: 测试集年份
 
         Returns:
             数据划分字典
         """
         logger.info("="*60)
-        logger.info("按月随机划分数据集")
+        logger.info("时间序列划分（按年份）")
         logger.info("="*60)
-        logger.info(f"每年训练月数: {train_months_per_year}")
-        logger.info(f"每年验证月数: {valid_months_per_year}")
-        logger.info(f"每年测试月数: {12 - train_months_per_year - valid_months_per_year}")
+        logger.info(f"  训练集: {train_years[0]}-{train_years[1]}")
+        logger.info(f"  验证集: {valid_year}")
+        logger.info(f"  测试集: {test_year}")
 
-        # 提取年月信息
+        # 提取年份
         df = df.copy()
         df['year'] = df['datetime'].dt.year
-        df['month'] = df['datetime'].dt.month
 
-        # 设置随机种子
-        random.seed(random_seed)
-        np.random.seed(random_seed)
-
-        train_indices = []
-        valid_indices = []
-        test_indices = []
-
-        # 每年单独随机分配
-        for year in sorted(df['year'].unique()):
-            year_data = df[df['year'] == year]
-            months_in_year = sorted(year_data['month'].unique())
-
-            logger.info(f"\n{year}年数据: {len(year_data)} 样本, {len(months_in_year)} 个月")
-
-            # 随机打乱月份
-            shuffled_months = months_in_year.copy()
-            random.shuffle(shuffled_months)
-
-            # 分配月份
-            train_months = shuffled_months[:train_months_per_year]
-            valid_months = shuffled_months[train_months_per_year:train_months_per_year + valid_months_per_year]
-            test_months = shuffled_months[train_months_per_year + valid_months_per_year:]
-
-            logger.info(f"  训练月份: {sorted(train_months)}")
-            logger.info(f"  验证月份: {sorted(valid_months)}")
-            logger.info(f"  测试月份: {sorted(test_months)}")
-
-            # 收集索引
-            for month in train_months:
-                train_indices.extend(year_data[year_data['month'] == month].index.tolist())
-            for month in valid_months:
-                valid_indices.extend(year_data[year_data['month'] == month].index.tolist())
-            for month in test_months:
-                test_indices.extend(year_data[year_data['month'] == month].index.tolist())
+        # 按年份分割
+        train_mask = df['year'].isin(train_years)
+        valid_mask = df['year'] == valid_year
+        test_mask = df['year'] == test_year
 
         # 创建数据集
-        X_train = df.loc[train_indices].filter(regex='^(?!datetime|year|month|open|high|low|close|volume|trend_label).*$')
-        y_train = df.loc[train_indices, 'trend_label']
+        X_train = df.loc[train_mask].filter(regex='^(?!datetime|year|open|high|low|close|volume|trend_label).*$')
+        y_train = df.loc[train_mask, 'trend_label']
 
-        X_valid = df.loc[valid_indices].filter(regex='^(?!datetime|year|month|open|high|low|close|volume|trend_label).*$')
-        y_valid = df.loc[valid_indices, 'trend_label']
+        X_valid = df.loc[valid_mask].filter(regex='^(?!datetime|year|open|high|low|close|volume|trend_label).*$')
+        y_valid = df.loc[valid_mask, 'trend_label']
 
-        X_test = df.loc[test_indices].filter(regex='^(?!datetime|year|month|open|high|low|close|volume|trend_label).*$')
-        y_test = df.loc[test_indices, 'trend_label']
+        X_test = df.loc[test_mask].filter(regex='^(?!datetime|year|open|high|low|close|volume|trend_label).*$')
+        y_test = df.loc[test_mask, 'trend_label']
 
         # 删除标签缺失的样本
         valid_train = y_train.notna()
@@ -401,7 +369,7 @@ def train_binary_model():
     )
 
     # 数据划分
-    splits = model.random_monthly_split(df, random_seed=42)
+    splits = model.time_series_split(df)
 
     # 训练
     model.train(
