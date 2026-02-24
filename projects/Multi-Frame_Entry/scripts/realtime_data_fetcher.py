@@ -182,6 +182,8 @@ class RealtimeDataFetcher:
         """
         使用akshare获取最新60分钟K线数据
 
+        API文档: https://akshare.akfamily.xyz/data/futures/futures.html#id13
+
         Args:
             symbol: 品种代码（如 'RB0' for 螺纹钢）
             bars: 获取K线数量
@@ -193,18 +195,18 @@ class RealtimeDataFetcher:
         try:
             logger.info(f"使用akshare获取数据: {symbol}")
 
-            # akshare品种代码映射
+            # akshare品种代码映射（使用品种代码而非具体合约）
             ak_symbol_map = {
-                'RB0': 'RB2501',  # 螺纹钢主力合约
-                'HC0': 'HC2501',  # 热卷主力合约
-                'I0': 'I2501',    # 铁矿石主力合约
-                'AU0': 'AU2501',  # 黄金主力合约
-                'CF0': 'CF501',   # 郑棉主力合约
+                'RB0': 'RB0',   # 螺纹钢
+                'HC0': 'HC0',   # 热卷
+                'I0': 'I0',     # 铁矿石
+                'AU0': 'AU0',   # 黄金
+                'CF0': 'CF0',   # 郑棉
             }
 
             ak_symbol = ak_symbol_map.get(symbol, symbol)
 
-            # period映射
+            # period映射（futures_zh_minute_sina使用的period格式）
             period_map = {
                 '1min': '1',
                 '5min': '5',
@@ -214,8 +216,10 @@ class RealtimeDataFetcher:
             }
             ak_period = period_map.get(period, '60')
 
-            # 使用sina源获取期货数据
-            df = ak.futures_zh_hist_sina_symbol(
+            logger.info(f"  调用API: ak.futures_zh_minute_sina(symbol='{ak_symbol}', period='{ak_period}')")
+
+            # 使用新浪期货分时数据接口
+            df = ak.futures_zh_minute_sina(
                 symbol=ak_symbol,
                 period=ak_period
             )
@@ -231,7 +235,7 @@ class RealtimeDataFetcher:
             if len(df) > bars:
                 df = df.tail(bars).copy()
 
-            logger.info(f"✓ 成功获取 {len(df)} 根K线")
+            logger.info(f"✓ 成功获取 {len(df)} 根K线 (时间范围: {df.index[0]} 到 {df.index[-1]})")
 
             return df
 
@@ -424,6 +428,9 @@ class RealtimeDataFetcher:
         """
         格式化akshare数据
 
+        新API (futures_zh_minute_sina) 返回的列:
+        - datetime, open, high, low, close, volume, hold
+
         Args:
             data: akshare原始数据
 
@@ -432,9 +439,12 @@ class RealtimeDataFetcher:
         """
         df = data.copy()
 
-        # akshare的列名通常是英文
         # 确保列名小写
         df.columns = [col.lower() for col in df.columns]
+
+        # 将 hold 列重命名为 open_interest（如果存在）
+        if 'hold' in df.columns:
+            df = df.rename(columns={'hold': 'open_interest'})
 
         # 处理时间列
         if 'date' in df.columns:
@@ -458,6 +468,9 @@ class RealtimeDataFetcher:
 
         # 按时间排序
         df = df.sort_index()
+
+        # 删除重复数据
+        df = df[~df.index.duplicated(keep='last')]
 
         return df
 

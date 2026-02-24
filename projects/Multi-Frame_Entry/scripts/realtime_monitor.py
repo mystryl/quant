@@ -194,8 +194,8 @@ def monitor_symbol(
     logger.info(f"{'='*80}")
 
     try:
-        # 1. 获取最新数据（优先使用本地数据）
-        fetcher = RealtimeDataFetcher(preferred_source='local')
+        # 1. 获取最新数据（优先使用akshare API，其次本地数据）
+        fetcher = RealtimeDataFetcher(preferred_source='akshare')
         df = fetcher.fetch_latest_data(symbol=symbol, bars=bars, period='60min')
 
         if df is None or len(df) < 60:
