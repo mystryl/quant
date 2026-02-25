@@ -2,6 +2,6 @@
 Multi-Frame Entry Strategy - Models Module
 """
 from .trend_model import TrendModel
-from .entry_model import EntryModel
+from .binary_model import BinaryTrendModel
 
-__all__ = ['TrendModel', 'EntryModel']
+__all__ = ['TrendModel', 'BinaryTrendModel']
