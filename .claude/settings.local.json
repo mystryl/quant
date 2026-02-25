@@ -45,7 +45,16 @@
       "Bash(__NEW_LINE_628d2d3e1596a12f__ cat /tmp/zigzag_tv_comparison.md)",
       "Skill(planning-with-files:planning-with-files)",
       "Bash(brew install:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Skill(document-skills:brand-guidelines)",
+      "Skill(document-skills:pptx)",
+      "Bash(chmod:*)",
+      "Bash(bash:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(tail:*)",
+      "Skill(code-review:code-review)"
     ]
   }
 }
