@@ -1,0 +1,30 @@
+# 多因子量化分析系统依赖包
+
+# 核心依赖
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+
+# Qlib 相关
+pyqlib>=0.9.0
+
+# 绘图和可视化
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# 命令行工具
+click>=8.0.0
+rich>=10.0.0
+
+# 数据处理
+scikit-learn>=0.24.0
+
+# 开发工具
+pytest>=6.2.0
+pytest-cov>=2.12.0
+black>=21.0.0
+flake8>=3.9.0
+
+# Jupyter 支持
+jupyter>=1.0.0
+ipython>=7.0.0

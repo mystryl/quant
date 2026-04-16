@@ -1,0 +1,5 @@
+{
+  "factor_name": "MA20 移动平均线因子",
+  "generation_time": "2026-03-19",
+  "factor_description": "基于 20 日移动平均线的趋势跟踪因子，通过比较当前价格与 MA20 的关系来判断趋势。"
+}

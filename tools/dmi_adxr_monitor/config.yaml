@@ -1,0 +1,27 @@
+# 价格监控配置文件
+
+# 监控品种列表
+monitors:
+  - symbol: "HC0"  # 热卷期货
+    name: "热卷主力"
+    targets:
+      - 3256.50  # SuperTrend (60分钟，支撑位)
+      - 3258.25  # VWAP40 (60分钟)
+      - 3246.90  # VWAP60 (60分钟)
+    threshold: 0.2  # 触发阈值（点）
+
+  # 可以添加更多品种
+  # - symbol: "RB0"  # 螺纹钢
+  #   name: "螺纹钢主力"
+  #   targets:
+  #     - 3500.00
+  #     - 3480.00
+  #   threshold: 0.5
+
+# 全局参数
+interval: 300  # 检测间隔（秒），默认5分钟
+
+# 日志配置
+log:
+  enabled: true  # 是否记录日志
+  file: "logs/price_monitor.log"  # 日志文件路径

@@ -1,0 +1,62 @@
+# 多因子批量分析配置文件示例
+
+# 因子定义列表
+factors:
+  # 20日均线偏离度因子
+  - name: MA20
+    expression: "Ref($close, 20) / $close - 1"
+    description: "20日均线偏离度，衡量价格相对于20日均线的偏离程度"
+
+  # 60日均线偏离度因子
+  - name: MA60
+    expression: "Ref($close, 60) / $close - 1"
+    description: "60日均线偏离度"
+
+  # 动量因子
+  - name: Momentum20
+    expression: "$close / Ref($close, 20) - 1"
+    description: "20日动量因子，衡量过去20天的价格变化"
+
+  # 波动率因子
+  - name: Volatility20
+    expression: "Std($close, 20) / Mean($close, 20)"
+    description: "20日波动率因子，衡量价格波动程度"
+
+  # 成交量变化率
+  - name: VolumeChange
+    expression: "$volume / Ref($volume, 5) - 1"
+    description: "5日成交量变化率"
+
+# 分析参数配置
+analysis:
+  # 股票列表文件路径（每行一个股票代码）
+  instruments: "examples/instruments.txt"
+
+  # 分析时间范围
+  start_date: "2020-01-01"
+  end_date: "2020-12-31"
+
+  # 性能评估参数
+  quantile: 0.2        # 多空分组分位数（默认0.2，即前20%和后20%）
+  top_pct: 0.2         # 选股比例（默认0.2，即选择前20%的股票）
+
+  # 策略分析选项
+  strategies:
+    - bull          # 看涨策略
+    - bear          # 看跌策略
+    - long_short    # 多空策略
+    - volatility    # 波动率策略
+
+# 输出选项
+output:
+  # 结果保存目录
+  dir: "output/batch_results"
+
+  # 输出格式
+  format: ["json", "csv"]
+
+  # 是否生成HTML报告
+  generate_report: true
+
+  # 是否生成详细报告（每个因子一个文件）
+  detailed: true

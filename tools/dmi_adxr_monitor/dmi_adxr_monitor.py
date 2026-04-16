@@ -14,6 +14,31 @@ from typing import Dict
 import sys
 
 
+def calculate_vwap(high: pd.Series, low: pd.Series, close: pd.Series,
+                   volume: pd.Series, N: int) -> pd.Series:
+    """
+    计算 VWAP 指标
+
+    Args:
+        high: 最高价序列
+        low: 最低价序列
+        close: 收盘价序列
+        volume: 成交量序列
+        N: VWAP 计算周期
+
+    Returns:
+        VWAP 值序列
+    """
+    # 计算典型价格
+    typical_price = (high + low + close) / 3
+
+    # 计算 VWAP = SUM(典型价格 * 成交量, N) / SUM(成交量, N)
+    tp_volume = typical_price * volume
+    vwaps = tp_volume.rolling(window=N).sum() / volume.rolling(window=N).sum()
+
+    return vwaps
+
+
 def calculate_supertrend(high: pd.Series, low: pd.Series, close: pd.Series,
                          period: int = 10, multiplier: float = 3.0) -> pd.DataFrame:
     """
@@ -213,7 +238,8 @@ def get_futures_data(symbol: str, period: str = '60', days: int = 60) -> pd.Data
 
 
 def analyze_indicator(symbol: str, period: str = '60', days: int = 60,
-                     N: int = 14, M: int = 6, st_period: int = 10, st_multiplier: float = 3.0) -> Dict:
+                     N: int = 14, M: int = 6, st_period: int = 10, st_multiplier: float = 3.0,
+                     vwap_periods: list = None) -> Dict:
     """
     分析指定期货合约的 DMI、ADXR 和 SuperTrend 指标
 
@@ -231,13 +257,18 @@ def analyze_indicator(symbol: str, period: str = '60', days: int = 60,
     """
     print(f"\n{'=' * 80}")
     print(f"正在分析 {symbol.upper()} {period}分钟 K线...")
-    print(f"参数: DMI(N={N}), ADXR(M={M}), SuperTrend({st_period}, {st_multiplier})")
+    print(f"参数: DMI(N={N}), ADXR(M={M}), SuperTrend({st_period}, {st_multiplier}), VWAP({vwap_periods})")
     print(f"{'=' * 80}")
 
     df = get_futures_data(symbol, period, days)
 
-    if df.empty or len(df) < (N + M * 2 + st_period):
-        print(f"错误: 数据不足，需要至少 {N + M * 2 + st_period} 条数据")
+    # 计算需要的最小数据量
+    min_required = N + M * 2 + st_period
+    if vwap_periods:
+        min_required = max(min_required, max(vwap_periods))
+
+    if df.empty or len(df) < min_required:
+        print(f"错误: 数据不足，需要至少 {min_required} 条数据")
         print(f"当前数据条数: {len(df) if not df.empty else 0}")
         return None
 
@@ -247,8 +278,17 @@ def analyze_indicator(symbol: str, period: str = '60', days: int = 60,
     # 计算 SuperTrend
     st_df = calculate_supertrend(df['high'], df['low'], df['close'], st_period, st_multiplier)
 
+    # 计算 VWAP（多周期）
+    vwap_data = {}
+    if vwap_periods:
+        for vwap_n in vwap_periods:
+            vwap_col = f'vwap_{vwap_n}'
+            vwap_data[vwap_col] = calculate_vwap(df['high'], df['low'], df['close'], df['volume'], vwap_n)
+
     # 合并指标
     df = pd.concat([df, dmi_df, st_df], axis=1)
+    if vwap_data:
+        df = pd.concat([df, pd.DataFrame(vwap_data, index=df.index)], axis=1)
 
     # 获取最新数据（跳过前 N + M * 2 条数据）
     min_periods = N + M * 2
@@ -303,6 +343,22 @@ def analyze_indicator(symbol: str, period: str = '60', days: int = 60,
     st_distance = latest['close'] - latest['supertrend']
     st_distance_pct = (st_distance / latest['close']) * 100
 
+    # VWAP 信号判断
+    vwap_results = {}
+    if vwap_periods:
+        for vwap_n in vwap_periods:
+            vwap_col = f'vwap_{vwap_n}'
+            if vwap_col in latest and not pd.isna(latest[vwap_col]):
+                vwap_value = latest[vwap_col]
+                vwap_distance = latest['close'] - vwap_value
+                vwap_distance_pct = (vwap_distance / latest['close']) * 100
+                vwap_results[vwap_n] = {
+                    'value': vwap_value,
+                    'distance': vwap_distance,
+                    'distance_pct': vwap_distance_pct,
+                    'position': '上方' if vwap_distance > 0 else '下方'
+                }
+
     return {
         'symbol': symbol,
         'period': period,
@@ -329,21 +385,28 @@ def analyze_indicator(symbol: str, period: str = '60', days: int = 60,
             'upper_band': latest['upper_band'],
             'lower_band': latest['lower_band']
         },
+        'vwap': vwap_results,
         'dataframe': df_valid
     }
 
 
-def print_analysis(analysis: Dict):
+def print_analysis(analysis: Dict, detailed: bool = False):
     """
     打印分析结果
 
     Args:
         analysis: 分析结果字典
+        detailed: 是否显示详细信息
     """
     if analysis is None:
         print("分析失败")
         return
 
+    # 简洁模式：只显示基本信息
+    if not detailed:
+        return
+
+    # 详细模式：显示完整分析报告
     print(f"\n{'=' * 80}")
     print(f"指标分析报告 - {analysis['symbol'].upper()} ({analysis['period']}分钟)")
     print(f"{'=' * 80}")
@@ -368,6 +431,16 @@ def print_analysis(analysis: Dict):
     print(f"SuperTrend: {st['value']:.2f}")
     print(f"趋势方向: {st['trend']}")
     print(f"距离 ST: {st['distance']:+.2f} ({st['distance_pct']:+.2f}%)")
+
+    # VWAP 指标
+    if 'vwap' in analysis and analysis['vwap']:
+        print(f"\n{'-' * 80}")
+        print("【VWAP 指标】")
+        print(f"{'-' * 80}")
+        for period_n, vwap_data in analysis['vwap'].items():
+            print(f"VWAP({period_n}): {vwap_data['value']:.2f}")
+            print(f"  位置: 价格在 VWAP {vwap_data['position']}")
+            print(f"  距离: {vwap_data['distance']:+.2f} ({vwap_data['distance_pct']:+.2f}%)")
 
     # 综合信号
     print(f"\n{'-' * 80}")
@@ -420,7 +493,7 @@ def main():
     """
     # 配置参数
     symbol = sys.argv[1] if len(sys.argv) > 1 else 'HC0'  # 默认使用热卷主力连续
-    periods = ['60', '30', '15']  # 1小时、30分钟、15分钟
+    periods = ['60', '15']  # 1小时、15分钟
     days = 60  # 获取60天数据
 
     # DMI 和 ADXR 参数
@@ -430,18 +503,21 @@ def main():
     # SuperTrend 参数
     st_params = {
         '60': {'period': 7, 'multiplier': 3.0},
-        '30': {'period': 10, 'multiplier': 3.0},
         '15': {'period': 10, 'multiplier': 3.0}
     }
 
+    # VWAP 参数（监控40和60周期）
+    vwap_periods = [40, 60]
+
     print("=" * 80)
-    print("多周期指标监控系统 (DMI / ADXR / SuperTrend)")
+    print("多周期指标监控系统 (DMI / ADXR / SuperTrend / VWAP)")
     print("=" * 80)
     print(f"监控合约: {symbol.upper()}")
     print(f"监控周期: {', '.join(periods)} 分钟")
     print(f"数据天数: {days} 天")
     print(f"参数设置: N={N} (DMI), M={M} (ADX平均, ADXR)")
-    print(f"SuperTrend: 60min(7,3.0), 30min(10,3.0), 15min(10,3.0)")
+    print(f"SuperTrend: 60min(7,3.0), 15min(10,3.0)")
+    print(f"VWAP 周期: {', '.join(map(str, vwap_periods))}")
     print("=" * 80)
 
     results = {}
@@ -459,7 +535,8 @@ def main():
                 N=N,
                 M=M,
                 st_period=st_period,
-                st_multiplier=st_multiplier
+                st_multiplier=st_multiplier,
+                vwap_periods=vwap_periods
             )
 
             if analysis:
@@ -477,51 +554,88 @@ def main():
         print("【多周期指标对比】")
         print(f"{'=' * 80}")
 
-        # 创建对比表
         periods_list = list(results.keys())
-        print(f"\n{'周期':<10} {'ADX':>8} {'ADXR':>8} {'SuperTrend':>12} {'ST趋势':>8} {'DMI信号':>10}")
-        print("-" * 80)
+        period_names = ['15分钟', '60分钟']
 
-        for period in periods_list:
-            dmi = results[period]['dmi']
-            st = results[period]['supertrend']
-            print(f"{period}分钟{'':<5} {dmi['adx']:>8.2f} {dmi['adxr']:>8.2f} {st['value']:>12.2f} {st['trend']:>8} {dmi['signal']:>10}")
+        # 准备数据
+        data_15 = results.get('15')
+        data_60 = results.get('60')
 
-        # 周期共振分析
-        print(f"\n{'=' * 80}")
-        print("【周期共振分析】")
-        print(f"{'=' * 80}")
+        if data_15 and data_60:
+            # 构建表格
+            print(f"\n{'指标':<20} {'15分钟':<25} {'60分钟':<25}")
+            print("-" * 70)
 
-        # DMI 信号一致性
-        dmi_signals = [results[p]['dmi']['signal'] for p in periods_list]
-        st_trends = [results[p]['supertrend']['trend'] for p in periods_list]
+            # 当前价格和时间
+            print(f"{'时间':<20} {str(data_15['datetime']):<25} {str(data_60['datetime']):<25}")
+            print(f"{'当前价格':<20} {data_15['price']:>10.2f}{'':<14} {data_60['price']:>10.2f}")
 
-        if len(set(dmi_signals)) == 1:
-            print(f"✓ DMI 信号一致: {dmi_signals[0]}")
-        else:
-            print(f"⚠️  DMI 信号不一致: {' vs '.join(dmi_signals)}")
+            # ADX 和 ADXR
+            print(f"{'ADX':<20} {data_15['dmi']['adx']:>10.2f}{'':<14} {data_60['dmi']['adx']:>10.2f}")
+            print(f"{'ADXR':<20} {data_15['dmi']['adxr']:>10.2f}{'':<14} {data_60['dmi']['adxr']:>10.2f}")
 
-        # SuperTrend 趋势一致性
-        if len(set(st_trends)) == 1:
-            print(f"✓ SuperTrend 趋势一致: {st_trends[0]}")
-        else:
-            print(f"⚠️  SuperTrend 趋势不一致: {' vs '.join(st_trends)}")
+            # SuperTrend (阻力或支撑)
+            st_type_15 = '支撑' if data_15['supertrend']['distance'] > 0 else '阻力'
+            st_type_60 = '支撑' if data_60['supertrend']['distance'] > 0 else '阻力'
+            print(f"{'SuperTrend':<20} {data_15['supertrend']['value']:>10.2f} ({st_type_15}){'':<4} {data_60['supertrend']['value']:>10.2f} ({st_type_60})")
 
-        # 综合共振
-        all_dmi_up = all('看涨' in signal for signal in dmi_signals)
-        all_dmi_down = all('看跌' in signal for signal in dmi_signals)
-        all_st_up = all(trend == '上升' for trend in st_trends)
-        all_st_down = all(trend == '下降' for trend in st_trends)
+            # VWAP 40 和 60
+            vwap_15 = data_15.get('vwap', {})
+            vwap_60 = data_60.get('vwap', {})
 
-        print(f"\n【综合建议】")
-        if all_dmi_up and all_st_up:
-            print(f"✓  DMI 和 SuperTrend 均看涨，可积极做多")
-        elif all_dmi_down and all_st_down:
-            print(f"✓  DMI 和 SuperTrend 均看跌，可积极做空")
-        else:
-            print(f"⚠️  不同周期信号不一致，建议观望")
+            if 40 in vwap_15 and 40 in vwap_60:
+                vwap40_pos_15 = '上方' if vwap_15[40]['distance'] > 0 else '下方'
+                vwap40_pos_60 = '上方' if vwap_60[40]['distance'] > 0 else '下方'
+                print(f"{'VWAP(40)':<20} {vwap_15[40]['value']:>10.2f} ({vwap40_pos_15}){'':<4} {vwap_60[40]['value']:>10.2f} ({vwap40_pos_60})")
+
+            if 60 in vwap_15 and 60 in vwap_60:
+                vwap60_pos_15 = '上方' if vwap_15[60]['distance'] > 0 else '下方'
+                vwap60_pos_60 = '上方' if vwap_60[60]['distance'] > 0 else '下方'
+                print(f"{'VWAP(60)':<20} {vwap_15[60]['value']:>10.2f} ({vwap60_pos_15}){'':<4} {vwap_60[60]['value']:>10.2f} ({vwap60_pos_60})")
+
+            # SuperTrend 趋势
+            print(f"{'SuperTrend趋势':<20} {data_15['supertrend']['trend']:<25} {data_60['supertrend']['trend']:<25}")
+
+            # DMI 信号
+            print(f"{'DMI信号':<20} {data_15['dmi']['signal']:<25} {data_60['dmi']['signal']:<25}")
+
+            # 综合分析
+            print("\n" + "-" * 70)
+            print("【综合分析】")
+            print("-" * 70)
+
+            # ADX 判断
+            adx_15 = data_15['dmi']['adx']
+            adx_60 = data_60['dmi']['adx']
+
+            if adx_15 < 20 and adx_60 < 20:
+                print("⚠️  双周期 ADX < 20，市场震荡，建议观望")
+            elif adx_15 > 25 and adx_60 > 25:
+                print("✓  双周期 ADX > 25，趋势明确")
+            else:
+                print(f"⚡  15分钟 ADX: {adx_15:.2f}, 60分钟 ADX: {adx_60:.2f}")
+
+            # 趋势一致性
+            st_trend_15 = data_15['supertrend']['trend']
+            st_trend_60 = data_60['supertrend']['trend']
+            dmi_signal_15 = data_15['dmi']['signal']
+            dmi_signal_60 = data_60['dmi']['signal']
+
+            if st_trend_15 == st_trend_60 and '看涨' in dmi_signal_15 and '看涨' in dmi_signal_60:
+                print("✓  趋势一致向上，可积极做多")
+            elif st_trend_15 == st_trend_60 and '看跌' in dmi_signal_15 and '看跌' in dmi_signal_60:
+                print("✓  趋势一致向下，可积极做空")
+            else:
+                print("⚠️  双周期趋势不一致，建议观望")
 
         print("=" * 80)
+
+        # 输出详细报告
+        print(f"\n{'=' * 80}")
+        print("【详细分析报告】")
+        print(f"{'=' * 80}")
+        for period in periods_list:
+            print_analysis(results[period], detailed=True)
 
     print("\n分析完成！")
 

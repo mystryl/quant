@@ -74,3 +74,4 @@ build/
 
 # Claude 本地配置
 .claude/settings.local.json
+.alma-snapshots
