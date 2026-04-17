@@ -72,6 +72,5 @@ dist/
 build/
 *.egg-info/
 
-# Claude 本地配置
-.claude/settings.local.json
-.alma-snapshots
+# Claude Code - 忽略所有配置和 YOLO 相关文件
+.claude/
