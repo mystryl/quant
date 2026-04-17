@@ -85,49 +85,103 @@ def calculate_adx_dmi(df: pd.DataFrame, n: int = 14, m: int = 6):
 # ADX/DMI factor signal encoder
 # ---------------------------------------------------------------------------
 
-def calculate_adx_factor(df: pd.DataFrame, n: int = 14, m: int = 6,
-                         lookback: int = 5) -> pd.Series:
-    """Generate a continuous factor value from ADX/DMI trading signals. Range ~ [-1, +1]."""
+def calculate_adx_factor(df: pd.DataFrame, n: int = 14, m: int = 6) -> pd.Series:
+    """
+    ADX/DMI factor — strictly following the 8-rule trading system.
+
+    Core principle: "先有方向（DI），再有趋势（ADX）"
+    DMI is a FILTER, not a bottom-fishing tool.
+
+    Signal encoding (continuous, range ~ [-1, +1]):
+      +1.0  ★ Strongest: ADX just crossed 20 up + DI+ on top (trend launch)
+      +0.8  ✅ Standard long: golden cross within 5 bars + ADX > 20
+      +0.5  📈 Trend continuation: DI+ > DI- + ADX > 20 (riding the trend)
+      +0.3  ⚠️ Trend weakening: above + ADX declining (reduce position)
+       0.0  ❌ No trade: ADX < 20 (choppy market, ignore all signals)
+      -0.7  ⬇️ Short reversal: death cross + ADX > 20 + ADX declining
+             (BLOCKED when ADX > 25 and DI+ > DI- — strong uptrend, never short)
+    """
     pdi, mdi, adx, adxr = calculate_adx_dmi(df, n, m)
 
+    # --- Signal detection ---
     golden_cross = (pdi > mdi) & (pdi.shift(1) <= mdi.shift(1))
     death_cross = (mdi > pdi) & (mdi.shift(1) <= pdi.shift(1))
+    adx_cross_up_20 = (adx > 20) & (adx.shift(1) <= 20)
+    adx_declining = adx < adx.shift(1)
 
     bars_since_golden = _bars_since(golden_cross)
     bars_since_death = _bars_since(death_cross)
 
-    adx_cross_up = (adx > 20) & (adx.shift(1) <= 20)
-    adx_declining = adx < adx.shift(1)
+    # DI spread narrowing (DI+ and DI- converging)
+    di_spread = (pdi - mdi).abs()
+    di_converging = di_spread < di_spread.shift(1)
 
+    # --- Build factor ---
     factor = pd.Series(0.0, index=df.index)
 
-    # Strongest bullish: ADX just crossed 20 upward + DI+ on top
-    mask = adx_cross_up & (pdi > mdi)
-    factor[mask] = 1.0
+    # ═══════════════════════════════════════════════════════
+    # RULE 七: ADX < 20 → 震荡行情, 不做交易 (factor stays 0)
+    # ═══════════════════════════════════════════════════════
 
-    # Standard bullish: recent golden cross + ADX > 20
-    mask = (bars_since_golden <= lookback) & (bars_since_golden > 0) & (adx > 20)
-    strength = (1 - bars_since_golden[mask] / lookback) * 0.6
-    adx_boost = np.clip((adx[mask] - 20) / 20, 0, 0.4)
-    factor[mask] = np.maximum(factor[mask], strength + adx_boost)
+    # All rules below only apply when ADX >= 20
 
-    # Bullish trend continuation: DI+ > DI- AND ADX > 25
-    mask = ((pdi > mdi) & (adx > 25) &
-            (bars_since_golden > lookback) & (bars_since_death > lookback))
-    factor[mask] = np.clip((adx[mask] - 25) / 30, 0.1, 0.5)
+    # ═══════════════════════════════════════════════════════
+    # RULE 五: 最强信号 — 趋势启动
+    # ADX 从下往上突破 20, 同时 DI+ 在上方
+    # ⭐ 一波行情的起点
+    # ═══════════════════════════════════════════════════════
+    strongest = adx_cross_up_20 & (pdi > mdi)
+    factor[strongest] = 1.0
 
-    # Exit signal: pull toward 0 when ADX declining
-    mask = (factor > 0) & adx_declining
-    factor[mask] *= 0.3
+    # ═══════════════════════════════════════════════════════
+    # RULE 二: 标准做多信号
+    # 最近5根K线内出现金叉 + ADX > 20
+    # "不是追金叉, 而是等金叉被趋势确认"
+    # ═══════════════════════════════════════════════════════
+    long_signal = (bars_since_golden <= 5) & (adx > 20)
+    factor[long_signal] = np.maximum(factor[long_signal], 0.8)
 
-    # Bearish: death cross + ADX > 20 + ADX declining
-    mask = ((bars_since_death <= lookback) & (bars_since_death > 0) &
-            (adx > 20) & adx_declining)
-    strength = (1 - bars_since_death[mask] / lookback) * 0.6
-    adx_boost = np.clip((adx[mask] - 20) / 20, 0, 0.4)
-    factor[mask] = -(strength + adx_boost)
+    # ═══════════════════════════════════════════════════════
+    # RULE 七-3: 强趋势 (ADX > 25) / 趋势初期 (ADX 20~25)
+    # DI+ 在上方 + ADX > 20 → 持续顺势
+    # ═══════════════════════════════════════════════════════
+    trend_bull = (pdi > mdi) & (adx > 20) & (bars_since_golden > 5)
+    factor[trend_bull] = np.maximum(factor[trend_bull], 0.5)
 
-    # Suppress in choppy market (ADX < 20)
+    # ═══════════════════════════════════════════════════════
+    # RULE 三: 不做空禁区
+    # ADX > 25 且 DI+ 在上方 → 典型逼空行情, 一律不做空
+    # ═══════════════════════════════════════════════════════
+    no_short_zone = (adx > 25) & (pdi > mdi)
+
+    # ═══════════════════════════════════════════════════════
+    # RULE 四: 做空条件 (反转, 少用)
+    # 死叉 + ADX > 20 + ADX 开始下降
+    # "不是死叉就空, 而是趋势开始变弱后的死叉"
+    # ═══════════════════════════════════════════════════════
+    short_signal = (
+        (bars_since_death <= 5) &
+        (adx > 20) &
+        adx_declining &
+        ~no_short_zone  # RULE 三: 强趋势不做空
+    )
+    factor[short_signal] = -0.7
+
+    # ═══════════════════════════════════════════════════════
+    # RULE 六: 离场 / 风险控制
+    # ADX 开始下降 或 DI+ 和 DI- 靠拢 → 减仓
+    # "趋势还没反转, 但赚钱阶段结束了"
+    # ═══════════════════════════════════════════════════════
+    exit_zone = adx_declining & (factor > 0) & (factor < 1.0)
+    factor[exit_zone] *= 0.3
+
+    # DI converging also attenuates
+    converge_exit = di_converging & (factor > 0) & (factor < 1.0)
+    factor[converge_exit] = np.minimum(factor[converge_exit], 0.3)
+
+    # ═══════════════════════════════════════════════════════
+    # FINAL: ADX < 20 → 强制归零
+    # ═══════════════════════════════════════════════════════
     factor[adx < 20] = 0.0
 
     return factor
@@ -424,7 +478,7 @@ def main():
     logger.info("=" * 80)
 
     # 1. Load real data
-    parquet_path = '/Users/mystryl/Documents/Quant/K线数据库/期货主力连续_parquet/RB9999.XSGE.parquet'
+    parquet_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'RB9999.XSGE.parquet')
     daily = load_real_data(parquet_path, start_date='2022-01-01')
 
     # 2. Run each variant
@@ -494,4 +548,16 @@ def main():
         ev = r['evaluation']
         m = r['metrics']
         tag = " <-- BEST" if name == best_name else ""
-        logger.info(f"  {name}: score={ev['total_score']:.2f}  IC={m['ic_mean']:.4f}  
+        logger.info(f"  {name}: score={ev['total_score']:.2f}  IC={m['ic_mean']:.4f}  "
+                    f"reliability={ev['reliability']}{tag}")
+
+    logger.info(f"\nBest variant: {best_name} "
+                f"(score={results[best_name]['evaluation']['total_score']:.2f})")
+    logger.info(f"\nData: 螺纹钢主力连续 RB9999.XSGE, 日线, {daily.index.min().date()} ~ {daily.index.max().date()}")
+    logger.info("=" * 80)
+    logger.info("Done. Reports saved to ./output/adx_real_n*/")
+    logger.info("=" * 80 + "\n")
+
+
+if __name__ == '__main__':
+    main()
